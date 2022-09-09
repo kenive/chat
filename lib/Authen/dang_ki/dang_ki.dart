@@ -1,14 +1,15 @@
-import 'package:app_chat/Authen/dang_ki/dang_ki.dart';
 import 'package:app_chat/Authen/method.dart';
-import 'package:app_chat/Authen/screenHome/screenHome.dart';
 import 'package:flutter/material.dart';
 
-class LoginScreen extends StatefulWidget {
+import '../screenHome/screenHome.dart';
+
+class CreateAccount extends StatefulWidget {
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  _CreateAccountState createState() => _CreateAccountState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _CreateAccountState extends State<CreateAccount> {
+  final TextEditingController _name = TextEditingController();
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
   bool isLoading = false;
@@ -38,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(
                     width: size.width / 1.1,
                     child: const Text(
-                      "Chào mừnng bạn!",
+                      "Chào mừng bạn đến với App chat",
                       style: TextStyle(
                         fontSize: 34,
                         fontWeight: FontWeight.bold,
@@ -48,16 +49,24 @@ class _LoginScreenState extends State<LoginScreen> {
                   Container(
                     width: size.width / 1.1,
                     child: Text(
-                      "Đăng nhập để tiếp tục!",
+                      "Tạo tài khoản",
                       style: TextStyle(
                         color: Colors.grey[700],
-                        fontSize: 25,
+                        fontSize: 20,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
                   SizedBox(
-                    height: size.height / 10,
+                    height: size.height / 20,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 18.0),
+                    child: Container(
+                      width: size.width,
+                      alignment: Alignment.center,
+                      child: field(size, "Name", Icons.account_box, _name),
+                    ),
                   ),
                   Container(
                     width: size.width,
@@ -73,23 +82,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   SizedBox(
-                    height: size.height / 10,
+                    height: size.height / 20,
                   ),
                   customButton(size),
-                  SizedBox(
-                    height: size.height / 40,
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => CreateAccount()));
-                    },
-                    child: const Text(
-                      "Tạo tài khoản",
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Text(
+                        "Login",
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   )
@@ -102,22 +108,21 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget customButton(Size size) {
     return GestureDetector(
       onTap: () {
-        if (_email.text.isNotEmpty && _password.text.isNotEmpty) {
+        if (_name.text.isNotEmpty &&
+            _email.text.isNotEmpty &&
+            _password.text.isNotEmpty) {
           setState(() {
             isLoading = true;
           });
 
-          logIn(_email.text, _password.text).then((user) {
+          createAccount(_name.text, _email.text, _password.text).then((user) {
             if (user != null) {
-              print("Login Sucessfull");
               setState(() {
                 isLoading = false;
               });
               Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => HomeScreen(),
-                  ));
+                  context, MaterialPageRoute(builder: (_) => HomeScreen()));
+              print("Account Created Sucessfull");
             } else {
               print("Login Failed");
               setState(() {
@@ -126,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
             }
           });
         } else {
-          print("Please fill form correctly");
+          print("Please enter Fields");
         }
       },
       child: Container(
@@ -138,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           alignment: Alignment.center,
           child: Text(
-            "Login",
+            "Create Account",
             style: TextStyle(
               color: Colors.white,
               fontSize: 18,

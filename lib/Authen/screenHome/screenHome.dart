@@ -1,3 +1,6 @@
+import 'package:app_chat/Authen/login/create_login.dart';
+import 'package:app_chat/Authen/method.dart';
+import 'package:app_chat/Authen/screenHome/screen_chat.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +12,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Map<String, dynamic>? userMap;
+
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> all = [];
   bool isLoading = false;
   final TextEditingController _search = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -18,6 +23,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance!.addObserver(this);
+    if (_search.text.isEmpty) {
+      onSearchAll();
+    }
     setStatus("Online");
   }
 
@@ -29,9 +37,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.inactive) {
       // online
       setStatus("Online");
+      print('object');
     } else {
       // offline
       setStatus("Offline");
@@ -47,24 +56,51 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  void onSearch() async {
-    FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  void onSearchAll() async {
+    try {
+      FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-    setState(() {
-      isLoading = true;
-    });
-
-    await _firestore
-        .collection('users')
-        .where("email", isEqualTo: _search.text)
-        .get()
-        .then((value) {
       setState(() {
-        userMap = value.docs[0].data();
+        isLoading = true;
+      });
+
+      var response = await _firestore.collection('users').get();
+      setState(() {
+        all = response.docs;
         isLoading = false;
       });
-      print(userMap);
-    });
+      print(all.length);
+    } catch (e) {
+      debugPrint('$e');
+    }
+  }
+
+  void onSearch() async {
+    try {
+      FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+      setState(() {
+        isLoading = true;
+      });
+
+      var response = await _firestore
+          .collection('users')
+          .where("name", isEqualTo: _search.text)
+          .get();
+      if (response.docs.isEmpty) {
+        setState(() {
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          userMap = response.docs[0].data();
+          isLoading = false;
+        });
+        print(userMap);
+      }
+    } catch (e) {
+      debugPrint('$e');
+    }
   }
 
   @override
@@ -73,9 +109,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Home Screen"),
+        title: const Text("Home Screen"),
         actions: [
-          //IconButton(icon: Icon(Icons.logout), onPressed: () => logOut(context))
+          IconButton(icon: Icon(Icons.logout), onPressed: () => logOut(context))
         ],
       ),
       body: isLoading
@@ -83,42 +119,78 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: Container(
                 height: size.height / 20,
                 width: size.height / 20,
-                child: CircularProgressIndicator(),
+                child: const CircularProgressIndicator(),
               ),
             )
           : Column(
               children: [
-                SizedBox(
-                  height: size.height / 20,
-                ),
-                Container(
-                  height: size.height / 14,
-                  width: size.width,
-                  alignment: Alignment.center,
-                  child: Container(
-                    height: size.height / 14,
-                    width: size.width / 1.15,
-                    child: TextField(
-                      controller: _search,
-                      decoration: InputDecoration(
-                        hintText: "Search",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  height: size.height / 50,
-                ),
-                ElevatedButton(
-                  onPressed: onSearch,
-                  child: Text("Search"),
-                ),
+                // SizedBox(
+                //   height: size.height / 20,
+                // ),
+                // Container(
+                //   height: size.height / 14,
+                //   width: size.width,
+                //   alignment: Alignment.center,
+                //   child: Container(
+                //     height: size.height / 14,
+                //     width: size.width / 1.15,
+                //     child: TextField(
+                //       controller: _search,
+                //       decoration: InputDecoration(
+                //         hintText: "Search",
+                //         border: OutlineInputBorder(
+                //           borderRadius: BorderRadius.circular(10),
+                //         ),
+                //       ),
+                //     ),
+                //   ),
+                // ),
+                // SizedBox(
+                //   height: size.height / 50,
+                // ),
+                // ElevatedButton(
+                //   onPressed: onSearch,
+                //   child: const Text("Search"),
+                // ),
                 SizedBox(
                   height: size.height / 30,
                 ),
+                ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: all.length,
+                    itemBuilder: (context, index) {
+                      if (all.isEmpty) {
+                        return Container();
+                      }
+                      return ListTile(
+                        onTap: () {
+                          String roomId = chatRoomId(
+                              _auth.currentUser!.displayName!,
+                              all[index]['name']);
+
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ChatRoom(
+                                chatRoomId: roomId,
+                                userMap: all[index].data(),
+                              ),
+                            ),
+                          );
+                        },
+                        leading:
+                            const Icon(Icons.account_box, color: Colors.black),
+                        title: Text(
+                          all[index]['name'],
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        subtitle: Text(all[index]['email']),
+                        trailing: const Icon(Icons.chat, color: Colors.black),
+                      );
+                    }),
                 userMap != null
                     ? ListTile(
                         onTap: () {
@@ -126,26 +198,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               _auth.currentUser!.displayName!,
                               userMap!['name']);
 
-                          // Navigator.of(context).push(
-                          //   MaterialPageRoute(
-                          //     builder: (_) => ChatRoom(
-                          //       chatRoomId: roomId,
-                          //       userMap: userMap!,
-                          //     ),
-                          //   ),
-                          // );
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ChatRoom(
+                                chatRoomId: roomId,
+                                userMap: userMap!,
+                              ),
+                            ),
+                          );
                         },
-                        leading: Icon(Icons.account_box, color: Colors.black),
+                        leading:
+                            const Icon(Icons.account_box, color: Colors.black),
                         title: Text(
                           userMap!['name'],
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.black,
                             fontSize: 17,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                         subtitle: Text(userMap!['email']),
-                        trailing: Icon(Icons.chat, color: Colors.black),
+                        trailing: const Icon(Icons.chat, color: Colors.black),
                       )
                     : Container(),
               ],

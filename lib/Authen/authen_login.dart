@@ -8,11 +8,10 @@ class Authenticate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LoginScreen();
-    // if (_auth.currentUser != null) {
-    //   return HomeScreen();
-    // } else {
-    //   return LoginScreen();
-    // }
+    if (_auth.currentUser != null) {
+      return HomeScreen();
+    } else {
+      return LoginScreen();
+    }
   }
 }
